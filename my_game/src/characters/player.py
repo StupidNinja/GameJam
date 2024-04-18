@@ -24,7 +24,7 @@ class Player(pygame.sprite.Sprite):
             
         
         
-    def move(self,vel):
+    def move_right(self,vel):
         self.x_vel = vel
         if self.direction != "right":
             self.direction = "right"
