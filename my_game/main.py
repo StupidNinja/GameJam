@@ -1,6 +1,6 @@
 import pygame
 from src.maps.maps import maps
-from my_game.src.characters.player.player import Player
+from src.characters.player.player import Player
 # Initialize Pygame
 pygame.init()
 
