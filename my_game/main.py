@@ -8,7 +8,8 @@ pygame.init()
 tile_size = 64
 screen_width = tile_size * len(maps["map_1"][0])
 screen_height = tile_size * len(maps["map_1"])
-win = screen_width,screen_height
+screen_size = (screen_width, screen_height)
+
 
 
 # Load the texture
@@ -33,19 +34,20 @@ def draw_map(map_name):
 
 # Game loop
 
-player = Player(0, screen_height-(tile_size*1), 64, 128)
+player = Player(0, (screen_height - (tile_size * 3)), 64, 128)
 running = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
-    # Clear the screen
-    screen.fill((0, 0, 0))
+    # Fill screen with sky blue color
+    screen.fill((135, 206, 235))
+
 
     # Draw the map
     draw_map("map_1")
-    player.draw(win)
+    player.draw(screen)
 
     # Update the display
     pygame.display.flip()
