@@ -1,6 +1,6 @@
 import pygame
 from src.maps.maps import maps
-
+from src.characters.player import Player
 # Initialize Pygame
 pygame.init()
 
@@ -8,6 +8,7 @@ pygame.init()
 tile_size = 64
 screen_width = tile_size * len(maps["map_1"][0])
 screen_height = tile_size * len(maps["map_1"])
+win = screen_width,screen_height
 
 
 # Load the texture
@@ -29,7 +30,10 @@ def draw_map(map_name):
             if tile_type != 0:  # Don't draw anything for empty space
                 screen.blit(textures[tile_type], (j * tile_size, i * tile_size))
 
+
 # Game loop
+
+player = Player(0, screen_height-(tile_size*1), 64, 128)
 running = True
 while running:
     for event in pygame.event.get():
@@ -41,6 +45,7 @@ while running:
 
     # Draw the map
     draw_map("map_1")
+    player.draw(win)
 
     # Update the display
     pygame.display.flip()
