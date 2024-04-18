@@ -11,7 +11,12 @@ screen_height = tile_size * len(maps["map_1"])
 
 
 # Load the texture
-ground_texture = pygame.image.load('my_game/assets/images/grass.png')
+textures = {
+    0: None,  # No texture for empty space
+    1: pygame.image.load('my_game/assets/images/grass.png'), # Grass ground texture
+    2: pygame.image.load('my_game/assets/images/box.png'), # Box texture
+    3: pygame.image.load('my_game/assets/images/concrete.png') # Concrete texture
+}
 
 # Create the screen
 screen = pygame.display.set_mode((screen_width, screen_height))
@@ -20,8 +25,9 @@ screen = pygame.display.set_mode((screen_width, screen_height))
 def draw_map(map_name):
     for i in range(len(maps[map_name])):
         for j in range(len(maps[map_name][i])):
-            if maps[map_name][i][j] == 1:
-                screen.blit(ground_texture, (j * tile_size, i * tile_size))
+            tile_type = maps[map_name][i][j]
+            if tile_type != 0:  # Don't draw anything for empty space
+                screen.blit(textures[tile_type], (j * tile_size, i * tile_size))
 
 # Game loop
 running = True
