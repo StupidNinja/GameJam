@@ -1,71 +1,93 @@
 import pygame
-import os
 
-def load_sprite_sheets(dir1, dir2, width, height, direction = False):
-    path = os.path.join("src", dir1, dir2)
-    images =[f for f in os.listdir(path) if os.path.isfile(join(path, f))]
-    
-    all_sprites = {}
-    
-    for image in images:
-        sprite_sheet = pygame.image.load(join(path, image)).convert_alpha()
-        
-        sprites = []
-        for i in range(sprite_sheet.get_width() // width):
-            surface = pygame.Surface((width, height), pygame.SRCALPHA, 32)
-            rect = pygame.Rect(i * width, 0, width, height)
-            surface.blit(sprite_sheet, (0, 0), rect)
-            sprites.append(pygame.transform.scale2x(surface))
-        
-        if direction:
-            all_sprites[image.replace(".png", "") + "_right"] = sprites
-            all_sprites[image.replace(".png", "") + "_left"] = flip(sprites)
-        else:
-            all_sprites[image.replace(".png", "")] = sprites
-            
-    return all_sprites  
-        
-class Player(pygame.sprite.Sprite):
-    COLOR=(255,0,0)
-    GRAVITY = 1
-    SPRITES = load_sprite_sheets("player", "animation", 32, 32, True)
-    def __init__(self, x, y, width, height ):
-        
+class Player:
+    def __init__(self, x, y, width, height):
         self.rect = pygame.Rect(x, y, width, height)
         self.x_vel = 0
         self.y_vel = 0
-        self.mask = 0
-        self.direction = "left"
+        self.is_jumping = False
+        self.prev_up_key = False
+        self.direction = "right"
+        self.sprites = {
+            "calm": pygame.transform.scale(pygame.image.load('my_game/src/characters/player/animation/calm.png'), (width, height)),
+            "walk": [
+                pygame.transform.scale(pygame.image.load('my_game/src/characters/player/animation/walk1.png'), (width, height)),
+                pygame.transform.scale(pygame.image.load('my_game/src/characters/player/animation/walk2.png'), (width, height)),
+                pygame.transform.scale(pygame.image.load('my_game/src/characters/player/animation/walk3.png'), (width, height))
+            ]
+        }
+        self.state = "calm"
         self.animation_count = 0
-        self.fall_count = 0
-        
+
     def move(self, dx, dy):
-        self.rect.x +=dx
+        self.rect.x += dx
         self.rect.y += dy
-        
-    def move_left(self, vel):
-        self.x_vel = -vel
-        if self.direction != "left":
-            self.direction = "left"
-            self.animation_count = 0
-            
-        
-        
-    def move_right(self,vel):
-        self.x_vel = vel
-        if self.direction != "right":
-            self.direction = "right"
-            self.animation_count = 0
-            
-    def loop(self, fps):
-        # self.y_vel += min(1, (self.fall_count / fps) * self.GRAVITY)
-        self.move(self.x_vel, self.y_vel)
-        
-        self.fall_count += 1
-    
+        if dx != 0:
+            self.state = "walk"
+            self.direction = "right" if dx > 0 else "left"
+        else:
+            self.state = "calm"
+
+    def apply_gravity(self, gravity):
+        self.y_vel += gravity
+        self.rect.y += self.y_vel
+
     def draw(self, win):
-        self.sprite = self.SPRITES["calm"][0]
-        win.blit(self.sprite, (self.rect.x, self.rect.y))
+        if self.state == "calm":
+            sprite = self.sprites["calm"]
+        else:  # Player is walking
+            sprite = self.sprites["walk"][self.animation_count // 10 % len(self.sprites["walk"])]
+            self.animation_count += 1
+
+        if self.direction == "left":
+            sprite = pygame.transform.flip(sprite, True, False)
+
+        win.blit(sprite, (self.rect.x, self.rect.y))
+    # Collision detection with tiles
+    def collision_test(self, tiles):
+        collisions = []
+        for tile in tiles:
+            if self.rect.colliderect(tile):
+                collisions.append(tile)
+        return collisions
+    def jump(self, tile_size):
+        # Changable jump velocity respectively for scale 10 for 64px tile, 7.5 for 32px tile, 5 for 16px tile
+        self.y_vel = (-3.75) - ((tile_size/16)*1.25)  #  5 for 16px tiles, 7.5 for 32px tiles, and 10 for 64px tiles
+        print(self.y_vel)
+        
     
-        
-        
+    def handle_move(self, player, keys, tiles, PLAYER_VEL, tile_size):
+        # Apply gravity to the player
+        initial_y = player.rect.y  # Store the player's initial y position
+        player.apply_gravity(0.5)
+        y_collisions = player.collision_test(tiles)
+        if y_collisions:  # If a collision occurred, reset the player's y position
+            player.rect.y = initial_y
+            player.y_vel = 0
+            player.is_jumping = False  # Player has landed
+
+        if keys[pygame.K_LEFT]:
+            initial_x = player.rect.x  # Store the player's initial x position
+            player.move(-PLAYER_VEL, 0)
+            x_collisions = player.collision_test(tiles)
+            if x_collisions:  # If a collision occurred, reset the player's x position
+                player.rect.x = initial_x
+            player.x_vel = 0
+
+        if keys[pygame.K_RIGHT]:
+            initial_x = player.rect.x  # Store the player's initial x position
+            player.move(PLAYER_VEL, 0)
+            x_collisions = player.collision_test(tiles)
+            if x_collisions:  # If a collision occurred, reset the player's x position
+                player.rect.x = initial_x
+            player.x_vel = 0
+
+        if keys[pygame.K_UP] and not player.prev_up_key and not player.is_jumping:  # Jump if UP key is just pressed and player is not already jumping
+            # Check if there's a tile above the player
+            player.rect.y -= 1  # Temporarily move the player up
+            if not player.collision_test(tiles):
+                player.jump(tile_size)
+                player.is_jumping = True  # Player has jumped
+            player.rect.y += 1  # Move the player back to the original position
+
+        player.prev_up_key = keys[pygame.K_UP]  # Store the current state of the UP key
