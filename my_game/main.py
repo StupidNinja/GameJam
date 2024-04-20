@@ -1,43 +1,69 @@
+# main.py
 import pygame
-from src.maps.maps import maps
+from src.maps.maps import maps, underworld_maps
+from src.characters.player.player import Player
+from src.utils import load_textures, draw_map, handle_player_movement
+from src.game import Game
 
-# Initialize Pygame
-pygame.init()
+def main():
+    # Initialize Pygame
+    pygame.init()
 
-# Define the size of each tile and the screen
-tile_size = 64
-screen_width = tile_size * len(maps["map_1"][0])
-screen_height = tile_size * len(maps["map_1"])
+    # Define the size of each tile and the screen
+    tile_size =64 # Change this value to shrink or expand the tiles
+    screen_width = tile_size * len(maps["map_1"][0])
+    screen_height = tile_size * len(maps["map_1"])
+    screen_size = (screen_width, screen_height)
 
+    FPS = 60
+    PLAYER_VEL = 5
+    PLAYER_Y = (screen_height - tile_size *2)
+    clock = pygame.time.Clock()
 
-# Load the texture
-ground_texture = pygame.image.load('my_game/assets/images/grass.png')
+    # Load the texture
+    textures = load_textures(tile_size)
 
-# Create the screen
-screen = pygame.display.set_mode((screen_width, screen_height))
+    # Create the screen
+    screen = pygame.display.set_mode((screen_width, screen_height))
 
-# Draw the map
-def draw_map(map_name):
-    for i in range(len(maps[map_name])):
-        for j in range(len(maps[map_name][i])):
-            if maps[map_name][i][j] == 1:
-                screen.blit(ground_texture, (j * tile_size, i * tile_size))
+    # Create the player
+    player = Player(0, PLAYER_Y, tile_size, tile_size)  # Change the player size to match the tile size
 
-# Game loop
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+    # Initialize the current map and map type
+    current_map_key = "map_1"
+    current_maps = maps
 
-    # Clear the screen
-    screen.fill((0, 0, 0))
+    # Create the game
+    game = Game(screen, current_maps, current_map_key, player, textures, tile_size)
 
-    # Draw the map
-    draw_map("map_1")
+    # Game loop
+    running = True
+    while running:
+        clock.tick(FPS)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_k:
+                    game.switch_map()
 
-    # Update the display
-    pygame.display.flip()
+        # Fill screen with sky blue color
+        screen.fill((135, 206, 235))
 
-# Quit Pygame
-pygame.quit()
+        # Handle player movement
+        handle_player_movement(player, pygame.key.get_pressed(), game.tiles, PLAYER_VEL, tile_size)
+
+        # Draw the map
+        draw_map(game.current_map_key, game.current_maps, game.textures, game.screen, game.tile_size)
+
+        # Draw the player
+        player.draw(screen)
+
+        # Update the display
+        pygame.display.flip()
+
+    # Quit Pygame
+    pygame.quit()
+
+if __name__ == "__main__":
+    main()
