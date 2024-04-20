@@ -3,7 +3,6 @@ import pygame
 class Player:
     def __init__(self, x, y, width, height):
         self.rect = pygame.Rect(x, y, width, height)
-        
         self.x_vel = 0
         self.y_vel = 0
         self.is_jumping = False
@@ -20,7 +19,6 @@ class Player:
         }
         self.state = "calm"
         self.animation_count = 0
-        # self.mask = pygame.mask.from_surface(self.sprites)
 
     def move(self, dx, dy):
         self.rect.x += dx

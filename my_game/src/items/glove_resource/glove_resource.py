@@ -1,18 +1,25 @@
 import pygame
-import os
 
-class Resource:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        self.width = 50  # Replace with the actual width
-        self.height = 50  # Replace with the actual height
-        self.images = [pygame.image.load(os.path.join('my_game\\src\\items\\glove_resource\\animation', f'glove_resource{i+1}.png')) for i in range(8)]
-        self.frame = 0
 
-    def draw(self, screen):
-        screen.blit(self.images[self.frame % len(self.images)], (self.x, self.y))
-        self.frame += 1
+class Resource(pygame.sprite.Sprite):
+    def __init__(self, x, y, image):
+        super().__init__()
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x, y)
+        self.active = True
+        self.visible = True
+
+
+    def draw(self, surface):
+        if self.visible:
+            surface.blit(self.image, self.rect)
 
     def get_rect(self):
         return pygame.Rect(self.x, self.y, self.width, self.height)
+
+class CustomGroup(pygame.sprite.Group):
+    def draw(self, surface):
+        for sprite in self.sprites():
+            if sprite.visible:
+                surface.blit(sprite.image, sprite.rect)
