@@ -24,7 +24,7 @@ class Game:
             collision = False
             for tile in self.tiles:
                 if self.player.rect.colliderect(tile):
-                    print("Player is on a tile when the map changed. Adjusting player position.")
+                    # print("Player is on a tile when the map changed. Adjusting player position.")
                     self.player.rect.y = tile.y - self.player.rect.height
                     collision = True
                     break
