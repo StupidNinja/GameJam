@@ -23,11 +23,11 @@ def main():
     # Load the texture
     textures = load_textures(tile_size)
 
-    # Create the screen
+    # Create the screen 
     screen = pygame.display.set_mode((screen_width, screen_height))
 
     # Create the player
-    player = Player(0, PLAYER_Y, tile_size, tile_size)  # Change the player size to match the tile size
+    player = Player(0, PLAYER_Y, tile_size-5, tile_size-5)  # Change the player size to match the tile size
 
     # Initialize the current map and map type
     current_map_key = "map_1"
