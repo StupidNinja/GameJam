@@ -27,14 +27,15 @@ def main():
     screen = pygame.display.set_mode((screen_width, screen_height))
 
     # Create the player
-    player = Player(0, PLAYER_Y, tile_size-5, tile_size-5)  # Change the player size to match the tile size
+    player = Player(0, PLAYER_Y, tile_size, tile_size)  # Change the player size to match the tile size
+    player_position = (player.rect.x, player.rect.y)
 
     # Initialize the current map and map type
     current_map_key = "map_1"
     current_maps = maps
 
     # Create the game
-    game = Game(screen, current_maps, current_map_key, player, textures, tile_size)
+    game = Game(screen, current_maps, underworld_maps, current_map_key, player, textures, tile_size, maps)
 
     # Game loop
     running = True
@@ -53,8 +54,11 @@ def main():
         # Handle player movement
         handle_player_movement(player, pygame.key.get_pressed(), game.tiles, PLAYER_VEL, tile_size)
 
+        # Update the player's position
+        player_position = (player.rect.x, player.rect.y)
+
         # Draw the map
-        draw_map(game.current_map_key, game.current_maps, game.textures, game.screen, game.tile_size)
+        draw_map(game.current_map_key, game.current_maps, game.underworld_maps, game.textures, game.screen, game.tile_size,maps,player_position)
 
         # Draw the player
         player.draw(screen)

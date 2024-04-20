@@ -59,7 +59,7 @@ class Player:
     def jump(self, tile_size):
         # Changable jump velocity respectively for scale 10 for 64px tile, 7.5 for 32px tile, 5 for 16px tile
         self.y_vel = (-3.75) - ((tile_size/16)*1.5)  #  5 for 16px tiles, 7.5 for 32px tiles, and 10 for 64px tiles
-        print(self.y_vel)
+        # print(self.y_vel)
         
     
     def handle_move(self, player, keys, tiles, PLAYER_VEL, tile_size):
