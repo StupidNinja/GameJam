@@ -80,6 +80,8 @@ def main():
             sections_number = 2
             game.switch_map_key("map_3")
             player.rect.x, player.rect.y = 0, PLAYER_Y
+        elif game.resources_collected == 2 and game.current_map_key == "map_3":
+            return "Restart"
             
             
 

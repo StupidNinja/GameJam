@@ -18,7 +18,7 @@ class Resource(pygame.sprite.Sprite):
     def get_rect(self):
         return pygame.Rect(self.x, self.y, self.width, self.height)
 
-class CustomGroup(pygame.sprite.Group):
+class CustomGroup(pygame.sprite.Group): # Custom group class that allows for drawing only visible sprites
     def draw(self, surface):
         for sprite in self.sprites():
             if sprite.visible:
