@@ -1,3 +1,4 @@
+# game.py
 import pygame
 from src.maps.maps import maps, underworld_maps
 from src.utils import create_resources
@@ -61,7 +62,7 @@ class Game:
                 pygame.draw.rect(self.screen, bar_color, pygame.Rect(x, y, section_width, bar_height))
             else:
                 pygame.draw.rect(self.screen, empty_color, pygame.Rect(x, y, section_width, bar_height))
-
+                
     def switch_map(self):
         if self.current_maps == self.maps:
             self.current_maps = self.underworld_maps
@@ -78,10 +79,11 @@ class Game:
                 sprite.active = False
         self.tiles = self.create_tiles()
         self._adjust_player_position()
+
     def switch_map_key(self, new_map_key):
         if new_map_key in self.maps:
             self.current_map_key = new_map_key
-            self.current_maps = self.maps if not self.is_underworld else self.underworld_maps
+            self.current_maps = self.maps
             self.tiles = self.create_tiles()
             self.entities = self.create_entities()
             self.resources = {new_map_key: create_resources(self.current_maps[self.current_map_key], self.textures, self.tile_size, self.is_underworld)}

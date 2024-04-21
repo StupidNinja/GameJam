@@ -31,6 +31,9 @@ def main():
     # Create the screen 
     screen = pygame.display.set_mode((screen_width, screen_height))
 
+    
+
+
     # Create the player
     player = Player(0, PLAYER_Y, tile_size-5, tile_size-5)  # Change the player size to match the tile size
     player_position = (player.rect.x, player.rect.y)
@@ -43,6 +46,7 @@ def main():
     # Game loop
     running = True
     previous_map_key = None
+    end_game = False
     sections_number = 4
     while running:
         clock.tick(FPS)
@@ -58,6 +62,12 @@ def main():
                         game.current_resources = game.resources[game.current_map_key]
                         previous_map_key = game.current_map_key
 
+        # Check if the player has moved beyond the screen by 1 tile size on the left or right, and 1.5 tile sizes on the top or bottom
+        if player.rect.x < -tile_size or player.rect.x > screen_width + tile_size or player.rect.y < -1.5 * tile_size or player.rect.y > screen_height + 1.5 * tile_size:
+            return "Restart" 
+                    
+            
+        
         if game.resources_collected == 4 and game.current_map_key == "map_1":
             game.resources_collected = 0
             sections_number = 3
@@ -89,7 +99,7 @@ def main():
                 sprite.visible = True
 
         # Handle player movement
-        handle_player_movement(player, pygame.key.get_pressed(), game.tiles, PLAYER_VEL, tile_size, game)
+        handle_player_movement(player, pygame.key.get_pressed(), game.tiles, PLAYER_VEL, tile_size, game,game.is_underworld)
 
         # Update the sprites
         for sprite in game.current_resources.sprites():
@@ -112,8 +122,9 @@ def main():
         # Draw the player
         player.draw(screen)
 
-        # Update the display
+        # Update the display 
         pygame.display.flip()
+
 
     # Quit Pygame
     pygame.quit()

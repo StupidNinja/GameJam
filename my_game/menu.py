@@ -1,6 +1,7 @@
 # menu.py
 import pygame
 from main import main
+from game import Game
 
 class Button:
     def __init__(self, text, x, y, width, height, inactive_color, active_color):
@@ -54,7 +55,6 @@ def menu():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-
         screen.fill((0, 0, 0))  # Fill the screen with black
 
         start_button.draw(screen)
@@ -62,6 +62,9 @@ def menu():
 
         start_button.handle_click()
         quit_button.handle_click()
+
+        if main is "Restart":
+            main()
 
         pygame.display.update()
 

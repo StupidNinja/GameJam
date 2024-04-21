@@ -1,0 +1,564 @@
+# main.py
+import pygame
+from src.maps.maps import maps, underworld_maps
+from src.characters.player.player import Player
+from src.utils import load_textures, draw_map, handle_player_movement,create_resources
+from src.items.glove_resource.glove_resource import Resource
+from game import Game
+
+def main():
+    # Initialize Pygame
+    pygame.init()
+
+    # Define the size of each tile and the screen
+    tile_size =64 # Change this value to shrink or expand the tiles
+    screen_width = tile_size * len(maps["map_1"][0])
+    screen_height = tile_size * len(maps["map_1"])
+    screen_size = (screen_width, screen_height)
+
+    FPS = 60
+    PLAYER_VEL = 5
+    PLAYER_Y = (screen_height - tile_size *2) + 3
+    clock = pygame.time.Clock()
+    
+    # Initialize the current map and map type
+    current_map_key = "map_1"
+    current_maps = maps
+
+    # Load the texture
+    textures = load_textures(tile_size)
+
+    # Create the screen 
+    screen = pygame.display.set_mode((screen_width, screen_height))
+
+    
+
+
+    # Create the player
+    player = Player(0, PLAYER_Y, tile_size-5, tile_size-5)  # Change the player size to match the tile size
+    player_position = (player.rect.x, player.rect.y)
+
+    
+
+    # Create the game
+    game = Game(screen, current_maps, underworld_maps, current_map_key, player, textures, tile_size, maps)
+
+    # Game loop
+    running = True
+    previous_map_key = None
+    end_game = False
+    sections_number = 4
+    while running:
+        clock.tick(FPS)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_k:
+                    game.switch_map()
+                    print(game.resources)
+                    if game.current_map_key != previous_map_key:
+                        game.resources[game.current_map_key] = create_resources(game.current_maps[game.current_map_key], game.textures, game.tile_size, game.is_underworld)
+                        game.current_resources = game.resources[game.current_map_key]
+                        previous_map_key = game.current_map_key
+
+        # Check if the player has reached the end of the game   
+        if game.check_end_game():
+            end_game = True
+            running = False
+
+        if game.resources_collected == 4 and game.current_map_key == "map_1":
+            game.resources_collected = 0
+            sections_number = 3
+            game.switch_map_key("map_2")
+            player.rect.x, player.rect.y = 0, PLAYER_Y
+            
+
+        elif game.resources_collected == 3 and game.current_map_key == "map_2":
+            game.resources_collected = 0
+            sections_number = 2
+            game.switch_map_key("map_3")
+            player.rect.x, player.rect.y = 0, PLAYER_Y
+            
+            
+
+        # Fill screen with sky blue color
+        screen.fill((135, 206, 235))
+
+        game.collect_resources()
+
+        # If the current map is not the underworld map, make the sprites inactive and invisible
+        if game.current_maps == game.maps:
+            for sprite in game.current_resources.sprites():
+                sprite.active = False
+                sprite.visible = False
+        else:
+            for sprite in game.current_resources.sprites():
+                sprite.active = True
+                sprite.visible = True
+
+        # Handle player movement
+        handle_player_movement(player, pygame.key.get_pressed(), game.tiles, PLAYER_VEL, tile_size, game,game.is_underworld)
+
+        # Update the sprites
+        for sprite in game.current_resources.sprites():
+            if sprite.active:
+                sprite.update()
+
+
+        # Update the player's position
+        player_position = (player.rect.x, player.rect.y)
+
+        # Draw the map
+        draw_map(game.current_map_key, game.current_maps, game.underworld_maps, game.textures, game.screen, game.tile_size,maps,player_position)
+
+        # Draw the resource bar
+        game.draw_bar(sections_number, game.resources_collected)
+
+        # Draw the resources
+        game.current_resources.draw(game.screen)
+
+        # Draw the player
+        player.draw(screen)
+
+        # Update the display 
+        pygame.display.flip()
+
+
+    # Quit Pygame
+    pygame.quit()
+
+if __name__ == "__main__":
+    main()
+
+
+# game.py
+import pygame
+from src.maps.maps import maps, underworld_maps
+from src.utils import create_resources
+from src.items.glove_resource.glove_resource import CustomGroup
+
+class Game:
+    def __init__(self, screen, current_maps, underworld_maps, current_map_key, player, textures, tile_size, maps):
+        self.screen = screen
+        self.current_maps = current_maps
+        self.maps = maps
+        self.underworld_maps = underworld_maps
+        self.current_map_key = current_map_key
+        self.player = player
+        self.textures = textures
+        self.tile_size = tile_size
+        self.tiles = self.create_tiles()
+        self.entities = self.create_entities()
+        self.resources_collected = 0
+        self.is_underworld = False 
+        self.resources = {current_map_key: create_resources(self.current_maps[self.current_map_key], self.textures, self.tile_size, self.is_underworld)}
+        self.current_resources = self.resources[current_map_key]
+
+    def create_tiles(self):
+        return [self._create_tile(i, j) for i, row in enumerate(self.current_maps[self.current_map_key]) for j, cell in enumerate(row) if cell != 0 and cell != 9]
+
+    def _create_tile(self, i, j):
+        return pygame.Rect(j * self.tile_size, i * self.tile_size, self.tile_size, self.tile_size)
+
+    def create_entities(self):
+        entities = []
+        for i, row in enumerate(self.current_maps[self.current_map_key]):
+            for j, cell in enumerate(row):
+                if cell == 9:
+                    entities.append(self._create_entity(i, j))
+        for i, row in enumerate(self.underworld_maps[self.current_map_key]):
+            for j, cell in enumerate(row):
+                if cell == 9:
+                    entities.append(self._create_entity(i, j))
+        return entities
+
+    def _create_entity(self, i, j):
+        return pygame.Rect(j * self.tile_size, i * self.tile_size, self.tile_size, self.tile_size)
+
+    def collect_resources(self):
+        if self.current_maps == self.underworld_maps:  # Check if the current map is an underworld map
+            for sprite in self.current_resources.sprites():
+                if sprite.active and pygame.sprite.collide_rect(self.player, sprite):
+                    self.resources_collected += 1
+                    sprite.active = False
+                    sprite.visible = False
+
+    def draw_bar(self, total_sections, filled_sections, bar_color=(0, 255, 0), empty_color=(255, 0, 0), bar_width=100, bar_height=20, space=2):
+        section_width = (bar_width - (total_sections - 1) * space) // total_sections
+
+        for i in range(total_sections):
+            x = self.player.rect.centerx - bar_width // 2 + i * (section_width + space)
+            y = self.player.rect.y - bar_height - 10  # 10 is the space between the player and the bar
+            if y < 0:  # If the bar would be drawn off the screen, adjust its y-coordinate
+                y = self.player.rect.y + self.player.rect.height + 10
+            if i < filled_sections:
+                pygame.draw.rect(self.screen, bar_color, pygame.Rect(x, y, section_width, bar_height))
+            else:
+                pygame.draw.rect(self.screen, empty_color, pygame.Rect(x, y, section_width, bar_height))
+
+    def check_end_game(self):
+        # Get the tiles of type 3 (lava) and 6 (ships)
+        dangerous_tiles = []
+        for row in range(len(self.current_maps[self.current_map_key])):
+            for col in range(len(self.current_maps[self.current_map_key][row])):
+                tile_type = self.current_maps[self.current_map_key][row][col]
+                if tile_type == 3 or tile_type == 6:
+                    tile_rect = pygame.Rect(col*self.tile_size, row*self.tile_size, self.tile_size, self.tile_size)
+                    dangerous_tiles.append(tile_rect)
+
+     
+
+        # Check if the player is colliding with any of these tiles
+        collisions = self.player.collision_test(dangerous_tiles)
+        if collisions:
+            print("Game over!")
+            return True
+
+        # If there are no collisions, return False
+        return False
+    
+    def end_game(self):
+        # Display end screen
+        font = pygame.font.Font(None, 36)
+        text = font.render("Game Over", True, (255, 255, 255))
+        text_rect = text.get_rect(center=(self.screen.get_width()/2, self.screen.get_height()/2))
+        self.screen.blit(text, text_rect)
+        pygame.display.flip()
+        pygame.time.wait(3000)  # Wait for 3 seconds
+
+        # Quit Pygame
+        pygame.quit()
+
+    def switch_map(self):
+        if self.current_maps == self.maps:
+            self.current_maps = self.underworld_maps
+            self.is_underworld = True
+            # Reactivate and show the sprites
+            for sprite in self.current_resources.sprites():
+                sprite.active = True
+                sprite.visible = True
+        else:
+            self.current_maps = self.maps
+            self.is_underworld = False
+            # Deactivate the sprites
+            for sprite in self.current_resources.sprites():
+                sprite.active = False
+        self.tiles = self.create_tiles()
+        self._adjust_player_position()
+
+    def switch_map_key(self, new_map_key):
+        if new_map_key in self.maps:
+            self.current_map_key = new_map_key
+            self.current_maps = self.maps
+            self.tiles = self.create_tiles()
+            self.entities = self.create_entities()
+            self.resources = {new_map_key: create_resources(self.current_maps[self.current_map_key], self.textures, self.tile_size, self.is_underworld)}
+            self.current_resources = self.resources[new_map_key]
+            self._adjust_player_position()
+        else:
+            print(f"Invalid map key: {new_map_key}")
+            
+    def _adjust_player_position(self):
+        collision = True
+        while collision:
+            collision = False
+            for tile in self.tiles:
+                if self.player.rect.colliderect(tile):
+                    self.player.rect.y = tile.y - self.player.rect.height
+                    collision = True
+                    break
+
+# utils.py
+import pygame
+from src.items.glove_resource.glove_resource import Resource, CustomGroup
+from src.maps.maps import MiniMap
+
+def load_textures(tile_size):
+    return {
+        0: None,  # No texture for empty space
+        1: pygame.transform.scale(pygame.image.load('my_game/assets/images/grass2.png'), (tile_size, tile_size)),  # Grass ground texture
+        2: pygame.transform.scale(pygame.image.load('my_game/assets/images/box.png'), (tile_size, tile_size)),  # Box texture
+        3: pygame.transform.scale(pygame.image.load('my_game/assets/images/lava.png'), (tile_size, tile_size)), # lava texture
+        4: pygame.transform.scale(pygame.image.load('my_game/assets/images/metalbox.png'), (tile_size, tile_size)), # metalbox texture
+        5: pygame.transform.scale(pygame.image.load('my_game/assets/images/metalbox2.png'), (tile_size, tile_size)), # metalbox2 texture
+        6: pygame.transform.scale(pygame.image.load('my_game/assets/images/ships.png'), (tile_size, tile_size)), # ships texture
+        7: pygame.transform.scale(pygame.image.load('my_game/assets/images/mushroom.png'), (tile_size, tile_size)), # mushroom texture
+        8: pygame.transform.scale(pygame.image.load('my_game/assets/images/ground.png'), (tile_size, tile_size)), # ground texture
+        9: pygame.transform.scale(pygame.image.load('my_game/src/items/glove_resource/glove_resource.png'), (tile_size, tile_size))  # Glove texture
+    }
+
+def create_resources(map, textures, tile_size, is_underworld):
+    glove_resources = CustomGroup()
+
+    if is_underworld:
+        for i, row in enumerate(map):
+            for j, cell in enumerate(row):
+                if cell == 9:
+                    glove_resource = Resource(j * tile_size, i * tile_size, textures[9])
+                    glove_resources.add(glove_resource)
+
+    return glove_resources
+
+
+def draw_map(map_name, current_maps, underworld_maps, textures, screen, tile_size, maps, player_position):
+    for i in range(len(current_maps[map_name])):
+        for j in range(len(current_maps[map_name][i])):
+            tile_type = current_maps[map_name][i][j]
+            if tile_type != 0 and tile_type != 9:  # Don't draw anything for empty space
+                screen.blit(textures[tile_type], (j * tile_size, i * tile_size))
+                if tile_type == 3 or tile_type == 6:  # Draw a red border for dangerous tiles
+                    pygame.draw.rect(screen, (255, 0, 0), (j * tile_size, i * tile_size, tile_size, tile_size), 1)
+
+    other_map = underworld_maps[map_name] if current_maps == maps else maps[map_name]
+    mini_map = MiniMap(other_map, player_position)
+
+    screen_width, _ = screen.get_size()
+    mini_map_width, _ = mini_map.surface.get_size()
+    mini_map.draw(screen, (screen_width - mini_map_width, 0))
+
+
+def handle_player_movement(player, keys, tiles, PLAYER_VEL, tile_size, game,is_underworld):
+    player.handle_move(player, keys, tiles, PLAYER_VEL, tile_size)
+
+    dangerous_tiles = []
+    for row in range(len(game.current_maps[game.current_map_key])):
+        for col in range(len(game.current_maps[game.current_map_key][row])):
+            tile_type = game.current_maps[game.current_map_key][row][col]
+            if tile_type == 3 or tile_type == 6:
+                tile_rect = pygame.Rect(col*tile_size, row*tile_size, tile_size, tile_size)
+                dangerous_tiles.append(tile_rect)
+    collisions = player.collision_test(dangerous_tiles)
+    if collisions:
+        game.end_game()
+
+    if is_underworld:
+        collided_sprites = pygame.sprite.spritecollide(player, game.current_resources, True)
+        # The True argument makes spritecollide remove the sprites in the group when there is a collision
+        for sprite in collided_sprites:
+            game.resources_collected += 1
+
+# player.py
+import pygame
+
+class Player:
+    def __init__(self, x, y, width, height):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.x_vel = 0
+        self.y_vel = 0
+        self.is_jumping = False
+        self.prev_up_key = False
+        self.is_moving = False
+        self.direction = "right"
+        self.sprites = {
+            "calm": pygame.transform.scale(pygame.image.load('my_game/src/characters/player/animation/calm.png'), (width, height)),
+            "walk": [
+                pygame.transform.scale(pygame.image.load('my_game/src/characters/player/animation/walk1.png'), (width, height)),
+                pygame.transform.scale(pygame.image.load('my_game/src/characters/player/animation/walk2.png'), (width, height)),
+                pygame.transform.scale(pygame.image.load('my_game/src/characters/player/animation/walk3.png'), (width, height))
+            ]
+        }
+        self.state = "calm"
+        self.animation_count = 0
+
+    def move(self, dx, dy):
+        self.rect.x += dx
+        self.rect.y += dy
+        if dx != 0:
+            self.state = "walk"
+            self.direction = "right" if dx > 0 else "left"
+        else:
+            self.state = "calm"
+
+    def apply_gravity(self, gravity):
+        self.y_vel += gravity
+        self.rect.y += self.y_vel
+
+    def draw(self, win):
+        # if self.is_jumping:  # Player is jumping
+        #     sprite = self.sprites["jump"]
+        if self.is_moving:  # Player is walking
+            sprite = self.sprites["walk"][self.animation_count // 8 % len(self.sprites["walk"])]
+            self.animation_count += 1
+        else:  # Player is standing still
+            sprite = self.sprites["calm"]
+            self.animation_count = 0
+
+        if self.direction == "left":
+            sprite = pygame.transform.flip(sprite, True, False)
+
+        win.blit(sprite, (self.rect.x, self.rect.y))
+    # Collision detection with tiles
+    def collision_test(self, tiles):
+        collisions = []
+        for tile in tiles:
+            if self.rect.colliderect(tile):
+                collisions.append(tile)
+        return collisions
+    def jump(self, tile_size):
+        # Changable jump velocity respectively for scale 10 for 64px tile, 7.5 for 32px tile, 5 for 16px tile
+        self.y_vel = (-3.75) - ((tile_size/16)*1.5)  #  5 for 16px tiles, 7.5 for 32px tiles, and 10 for 64px tiles
+        # print(self.y_vel)
+        
+    
+    def handle_move(self, player, keys, tiles, PLAYER_VEL, tile_size):
+        # Apply gravity to the player
+        initial_y = player.rect.y  # Store the player's initial y position
+        player.apply_gravity(0.5)
+        y_collisions = player.collision_test(tiles)
+        if y_collisions:  # If a collision occurred, reset the player's y position
+            player.rect.y = initial_y
+            player.y_vel = 0
+            player.is_jumping = False  # Player has landed
+
+        if keys[pygame.K_LEFT]:
+            initial_x = player.rect.x  # Store the player's initial x position
+            player.move(-PLAYER_VEL, 0)
+            x_collisions = player.collision_test(tiles)
+            if x_collisions:  # If a collision occurred, reset the player's x position
+                player.rect.x = initial_x
+            player.x_vel = 0
+            self.is_moving = True
+
+        if keys[pygame.K_RIGHT]:
+            initial_x = player.rect.x  # Store the player's initial x position
+            player.move(PLAYER_VEL, 0)
+            x_collisions = player.collision_test(tiles)
+            if x_collisions:  # If a collision occurred, reset the player's x position
+                player.rect.x = initial_x
+            player.x_vel = 0
+            self.is_moving = True
+
+        if keys[pygame.K_UP] and not player.prev_up_key and not player.is_jumping:  # Jump if UP key is just pressed and player is not already jumping
+            # Check if there's a tile above the player
+            player.rect.y -= 1  # Temporarily move the player up
+            if not player.collision_test(tiles):
+                player.jump(tile_size)
+                player.is_jumping = True  # Player has jumped
+            player.rect.y += 1  # Move the player back to the original position
+        elif not keys[pygame.K_RIGHT] and not keys[pygame.K_LEFT]:
+            player.is_moving = False
+
+        player.prev_up_key = keys[pygame.K_UP]  # Store the current state of the UP key
+
+
+# maps.py
+import pygame
+
+class MiniMap:
+    def __init__(self, game_map, player_position, tile_size=8, opacity=128):
+        self.game_map = game_map
+        self.player_position = player_position
+        self.tile_size = tile_size
+        self.opacity = opacity
+        self.surface = self.create_surface()
+
+    def create_surface(self):
+        width = len(self.game_map[0]) * self.tile_size
+        height = len(self.game_map) * self.tile_size
+        surface = pygame.Surface((width, height)).convert_alpha()
+        surface.fill((0, 0, 0, 0))  # Fill with transparent color
+
+        for i, row in enumerate(self.game_map):
+            for j, cell in enumerate(row):
+                if cell != 0:
+                    color = (0, 0, 255, self.opacity) if cell == 9 else (255, 255, 255, self.opacity)
+                    pygame.draw.rect(surface, color, (j * self.tile_size, i * self.tile_size, self.tile_size, self.tile_size))
+
+        # Draw the player as a red tile
+        player_x, player_y = self.player_position
+        player_x //= 64  # Convert the player's x-coordinate to the mini map's scale
+        player_y //= 64  # Convert the player's y-coordinate to the mini map's scale
+        pygame.draw.rect(surface, (255, 0, 0, self.opacity), (player_x * self.tile_size, player_y * self.tile_size, self.tile_size, self.tile_size))
+
+        return surface
+
+    def draw(self, screen, position):
+        screen.blit(self.surface, position)
+
+maps = {
+    "map_1": [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],   # 10 by 21 map = 640 by 1344
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 2, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 2, 0],
+        [0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0 ,0, 0, 2, 0, 0, 0, 0, 0, 2, 0],
+        [0, 0, 0, 0, 0, 2, 2, 2, 0, 0, 0 ,0, 0, 2, 0, 0, 0, 0, 0, 2, 0],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    ],
+    
+    "map_2": [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
+        [0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 2, 8, 8, 8, 8, 8, 8],
+        [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 8, 8, 8, 8, 8, 8],
+        [2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 8, 8, 8, 8, 8, 8],
+        [0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 8, 8, 8, 8, 8, 8],
+        [0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 8, 8, 8, 8, 8, 8],
+        [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 8, 8, 8, 8, 8, 8],
+        [1, 1, 1, 1, 1, 1, 1, 8, 8, 8, 0, 0, 0, 0, 0, 8, 8, 8, 8, 8, 8],
+    ],
+    "map_3": [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 5, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0 ,0, 0, 0, 5, 5, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 5, 0, 0, 0],
+        [0, 0, 0, 0, 5, 0, 0, 0, 0, 5, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 5, 0, 0, 0, 0, 0, 0],
+        [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [5, 0, 0, 0, 5, 0, 0, 0, 5, 0, 0, 0, 5, 0, 0, 0, 5, 0, 0, 0, 5],
+    ]
+    
+    
+    #Add more maps here...
+}
+underworld_maps = {
+    "map_1": [
+        [4, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [4, 9, 0, 0, 0, 4, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [4, 5, 0, 0, 0, 4, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [4, 0, 0, 0, 5, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 5, 0, 6, 9, 0],
+        [4, 0, 0, 0, 4, 4, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 5, 0, 0, 0, 5, 0],
+        [4, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [4, 4, 0, 0, 9, 4, 0, 0, 0, 0, 4 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [4, 3, 3, 4, 4, 4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+    ],
+    
+    "map_2": [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0 ,0, 0, 0, 0, 2, 2, 2, 2, 2, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 2, 0, 2, 2, 2, 2],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 2, 2, 2, 2, 2, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 9, 2, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 2, 0, 2, 2, 0, 0, 0, 0, 9],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
+    ],
+    "map_3": [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 4, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 4, 0, 0, 0, 4, 0, 0, 0, 4 ,0, 0, 0, 4, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 4, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ]
+    
+
+    
+}
+
+Use this codes to identify why the collision with specific tile not workinf
