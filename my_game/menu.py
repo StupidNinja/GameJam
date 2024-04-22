@@ -1,7 +1,7 @@
 # menu.py
 import pygame
 from main import main
-from game import Game
+import math
 
 class Button:
     def __init__(self, text, x, y, width, height, inactive_color, active_color):
@@ -14,8 +14,8 @@ class Button:
         self.active_color = active_color
 
     def draw(self, screen):
-        mouse = pygame.mouse.get_pos()
-        if self.x + self.width > mouse[0] > self.x and self.y + self.height > mouse[1] > self.y:
+        mouse = pygame.mouse.get_pos() # Get the mouse position
+        if self.x + self.width > mouse[0] > self.x and self.y + self.height > mouse[1] > self.y: # Check if the mouse is over the button
             pygame.draw.rect(screen, self.active_color, (self.x, self.y, self.width, self.height))
         else:
             pygame.draw.rect(screen, self.inactive_color, (self.x, self.y, self.width, self.height))
@@ -49,14 +49,37 @@ def menu():
 
     start_button = Button("Start", screen_width // 2 - button_width // 2, button_y_start, button_width, button_height, (50, 50, 50), (100, 100, 100))
     quit_button = Button("Quit", screen_width // 2 - button_width // 2, button_y_start + button_height + button_y_gap, button_width, button_height, (50, 50, 50), (100, 100, 100))
+    # Create a font object
+    font = pygame.font.Font(None, 50)
+
+    # Create a text surface
+    text_surface = font.render("Dr.Heisenburger", True, (255, 255, 255))
+
+    # Rotate the text surface
+    angle = -10  # Adjust this value to change the tilt of the text
+    rotated_text_surface = pygame.transform.rotate(text_surface, angle)
+
+    # Calculate the position of the rotated text
+    text_x = screen_width // 2 - rotated_text_surface.get_width() // 2
+    text_y = 50  # Adjust this value to change the vertical position of the text
 
     running = True
+    frame_count = 0
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-        screen.fill((0, 0, 0))  # Fill the screen with black
-
+        # Increase the frame count
+        frame_count += 1
+        # Fill screen with gradient from toxic green to black from top to bottom
+        for y in range(screen_height):
+            # Use a sine wave to vary the intensity of the green color over time
+            green = min(int((math.sin(frame_count / 100) + 1) / 2 * y), 255)
+            color = (0, green, 0)
+            pygame.draw.line(screen, color, (0, y), (screen_width, y))
+        # Draw the text
+        screen.blit(rotated_text_surface, (text_x, text_y))
+        
         start_button.draw(screen)
         quit_button.draw(screen)
 

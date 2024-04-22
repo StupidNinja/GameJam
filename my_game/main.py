@@ -3,7 +3,6 @@ import pygame
 from src.maps.maps import maps, underworld_maps
 from src.characters.player.player import Player
 from src.utils import load_textures, draw_map, handle_player_movement,create_resources
-from src.items.glove_resource.glove_resource import Resource
 from game import Game
 
 def main():
@@ -14,7 +13,6 @@ def main():
     tile_size =64 # Change this value to shrink or expand the tiles
     screen_width = tile_size * len(maps["map_1"][0])
     screen_height = tile_size * len(maps["map_1"])
-    screen_size = (screen_width, screen_height)
 
     FPS = 60
     PLAYER_VEL = 5
@@ -46,7 +44,6 @@ def main():
     # Game loop
     running = True
     previous_map_key = None
-    end_game = False
     sections_number = 4
     while running:
         clock.tick(FPS)

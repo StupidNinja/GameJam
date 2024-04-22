@@ -46,7 +46,6 @@ class Game:
         if self.current_maps == self.underworld_maps:  # Check if the current map is an underworld map
             for sprite in self.current_resources.sprites():
                 if sprite.active and pygame.sprite.collide_rect(self.player, sprite):
-                    self.resources_collected += 1
                     sprite.active = False
                     sprite.visible = False
 
