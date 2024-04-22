@@ -38,8 +38,8 @@ class Button:
 def menu():
     pygame.init()
 
-    screen_width = 1280
-    screen_height = 640
+    screen_width = 1500
+    screen_height = 720
     screen = pygame.display.set_mode((screen_width, screen_height))
 
     button_width = 200
